@@ -14,11 +14,13 @@
     "@tresjs/cientos": "^5.9.0",
     "@tresjs/core": "^5.9.0",
     "three": "^0.186.0",
+    "tweakpane": "^4.0.5",
     "vue": "^3.5.42",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tweakpane/core": "^2.0.5",
     "@types/node": "^24.13.3",
     "@types/three": "^0.184.1",
     "@vitejs/plugin-vue": "^6.0.8",
