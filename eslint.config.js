@@ -5,7 +5,7 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 import globals from 'globals'
 
 export default tseslint.config(
-  { ignores: ['dist', 'dist-ssr'] },
+  { ignores: ['dist', 'dist-ssr', 'public'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],

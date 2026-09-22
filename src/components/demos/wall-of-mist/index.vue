@@ -1,25 +1,30 @@
 <script setup lang="ts">
-import { isWebGPURenderer, useTresContext } from '@tresjs/core'
+import { useTresContext } from '@tresjs/core'
 import { EquirectangularReflectionMapping } from 'three'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
+import { WebGPURenderer } from 'three/webgpu'
 import { onUnmounted } from 'vue'
+import VolumetricFog from './volumetric-fog.vue'
 
-// KTX2 picks its transcode target from the backend, so it has to be up first.
-// The top-level await is what makes the <Suspense> wrapper in the view meaningful.
 const { renderer, scene } = useTresContext()
-if (isWebGPURenderer(renderer.instance)) await renderer.instance.init()
 
 // The model is Draco-compressed with KHR_texture_basisu textures; both decoders
 // are served from public/ so the demo works offline.
 const draco = new DRACOLoader().setDecoderPath('/draco/')
-const ktx2 = new KTX2Loader().setTranscoderPath('/basis/').detectSupport(renderer.instance)
+const ktx2 = new KTX2Loader().setTranscoderPath('/basis/')
 
-const loader = new GLTFLoader()
-loader.setDRACOLoader(draco)
-loader.setKTX2Loader(ktx2)
+// KTX2 reads the transcode target off the live backend, so it has to be up before
+// anything loads. The await is what makes the view's <Suspense> wrapper meaningful.
+const rendererInstance = renderer.instance
+if (rendererInstance instanceof WebGPURenderer) {
+  await rendererInstance.init()
+  ktx2.detectSupport(rendererInstance)
+}
+
+const loader = new GLTFLoader().setDRACOLoader(draco).setKTX2Loader(ktx2)
 
 const { scene: model } = await loader.loadAsync('/WallOfMist/MTGWallOfMist.glb')
 
@@ -41,4 +46,6 @@ onUnmounted(() => {
 
 <template>
   <primitive :object="model" />
+
+  <VolumetricFog />
 </template>
