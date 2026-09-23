@@ -47,12 +47,16 @@ function setupFog() {
   return { fog, noiseTexture }
 }
 
-const fog = setupFog()
+const active = setupFog()
 
 onUnmounted(() => {
-  fog?.fog.dispose()
-  fog?.noiseTexture.dispose()
+  active?.fog.dispose()
+  active?.noiseTexture.dispose()
 })
 </script>
 
-<template></template>
+<!-- Renderless: the fog is a post-processing pass, so there is no geometry to add. The
+     slot keeps this a valid template root without putting a stray object in the scene. -->
+<template>
+  <slot />
+</template>

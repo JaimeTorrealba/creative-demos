@@ -7,6 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { WebGPURenderer } from 'three/webgpu'
 import { onUnmounted } from 'vue'
+import SmokeBanks from './smoke-banks.vue'
 import VolumetricFog from './volumetric-fog.vue'
 
 const { renderer, scene } = useTresContext()
@@ -46,6 +47,8 @@ onUnmounted(() => {
 
 <template>
   <primitive :object="model" />
+
+  <SmokeBanks />
 
   <VolumetricFog />
 </template>

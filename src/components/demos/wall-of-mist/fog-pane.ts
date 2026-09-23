@@ -1,4 +1,4 @@
-import type { Pane } from 'tweakpane'
+import type { FolderApi } from 'tweakpane'
 import type { FogDenoiser, FogPipeline } from './fog-pipeline'
 
 /**
@@ -7,7 +7,7 @@ import type { FogDenoiser, FogPipeline } from './fog-pipeline'
  * mode, the resolution scale (which also has to resize the low-res buffer) and the colour,
  * whose uniform holds a `Color` rather than the hex string Tweakpane hands back.
  */
-export function addFogControls(pane: Pane, fog: FogPipeline) {
+export function addFogControls(pane: FolderApi, fog: FogPipeline) {
   const { uniforms } = fog
 
   const params = {

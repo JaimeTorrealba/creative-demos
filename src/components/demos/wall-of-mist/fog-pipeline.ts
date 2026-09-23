@@ -26,8 +26,27 @@ import {
   type Data3DTexture,
   type Node,
   type Scene,
+  type TextureDataType,
   type WebGPURenderer
 } from 'three/webgpu'
+
+/**
+ * `@types/three` is pinned to 0.184 while `three` is 0.186, because the 0.186 types break
+ * TresJS's `:position="[x, y, z]"` array shorthand — swapping them in errors out both
+ * `WallOfMistView.vue` and `smoke-banks.vue`. Its `RTTNode` declaration predates the three
+ * members used below, all of which exist at runtime in 0.186 and are declared by 0.186's
+ * own types. These two shapes mirror that upstream declaration rather than widening
+ * anything; drop them if the pin is ever lifted.
+ */
+interface FogBufferOptions {
+  type: TextureDataType
+  format?: number
+  resolutionScale?: number
+}
+
+interface ResizableRTTNode {
+  setResolutionScale(scale: number): this
+}
 
 export type FogDenoiser = 'jbu' | 'gaussian' | 'raw'
 
@@ -61,7 +80,7 @@ export function createFogPipeline({
   // because the post-processing quad renders through its own orthographic camera.
   const cameraWorldMatrix = uniform(camera.matrixWorld)
   const cameraProjectionMatrixInverse = uniform(camera.projectionMatrixInverse)
-  const cameraPositionUniform = uniform(camera.position)
+  const cameraPosition = uniform(camera.position)
 
   // The example is tuned for a scene about ten units across. This one is roughly 120 deep
   // — the towers reach z = -118 and y = 25 — so density has to drop by about the same
@@ -143,7 +162,7 @@ export function createFogPipeline({
     const viewPos = getViewPosition(screenUV, depth, cameraProjectionMatrixInverse)
     const targetWorldPos = cameraWorldMatrix.mul(vec4(viewPos, 1.0)).xyz
 
-    const rayVector = targetWorldPos.sub(cameraPositionUniform)
+    const rayVector = targetWorldPos.sub(cameraPosition)
     const surfaceDist = rayVector.length()
     const rayDir = rayVector.normalize()
 
@@ -154,8 +173,8 @@ export function createFogPipeline({
     const dirY = rayDir.y
       .greaterThanEqual(0.0)
       .select(rayDir.y.max(0.00001), rayDir.y.min(-0.00001))
-    const t0 = fogBottomY.sub(cameraPositionUniform.y).div(dirY)
-    const t1 = fogTopY.sub(cameraPositionUniform.y).div(dirY)
+    const t0 = fogBottomY.sub(cameraPosition.y).div(dirY)
+    const t1 = fogTopY.sub(cameraPosition.y).div(dirY)
 
     const tStart = t0.min(t1).max(0.0)
     const tEnd = t0.max(t1).min(surfaceDist).min(tStart.add(maxRayDist))
@@ -166,14 +185,16 @@ export function createFogPipeline({
 
     // Jittering the first step trades banding for noise, which the denoiser then cleans up.
     const ditherOffset = interleavedGradientNoise(screenCoordinate.xy)
-    const positionRay = cameraPositionUniform
+    const positionRay = cameraPosition
       .add(rayDir.mul(tStart))
       .add(stepVector.mul(ditherOffset))
       .toVar()
 
     const accumulation = float(0.0).toVar()
 
-    Loop(steps, () => {
+    // Object form rather than `Loop(steps, ...)`: `steps` is a uniform node, and the bare
+    // form is typed to accept only a plain number.
+    Loop({ start: 0, end: steps }, () => {
       accumulation.addAssign(sampleCloudDensity(positionRay).mul(stepSize).mul(fogDensity))
       positionRay.addAssign(stepVector)
     })
@@ -198,11 +219,15 @@ export function createFogPipeline({
     return cloudFog.max(rangeFog)
   })
 
-  const lowResFogPass = rtt(volumetricFogPass(), null, null, {
+  // Declared as a const rather than inlined so `format` and `resolutionScale` survive the
+  // narrower pinned `RTTNodeOptions` — excess-property checking only fires on fresh literals.
+  const fogBufferOptions: FogBufferOptions = {
     type: UnsignedByteType,
     format: RedFormat,
     resolutionScale: resolutionScale.value
-  })
+  }
+
+  const lowResFogPass = rtt(volumetricFogPass(), null, null, fogBufferOptions)
 
   // Joint Bilateral Upsampling (Kopf et al. 2007) — full-res depth guides a 5x5 gather over
   // the low-res fog, so weights collapse across depth discontinuities and edges stay sharp.
@@ -256,10 +281,14 @@ export function createFogPipeline({
     return sumColor.div(sumWeight.max(0.0001))
   })
 
+  // All three branches must resolve to a float. The fog buffer is single-channel, so the two
+  // that sample it come back as a vec4 of (fog, 0, 0, 1) and need .r taken off them —
+  // handing that vec4 to mix() as the blend factor would interpolate per channel and leave
+  // green and blue unfogged.
   const denoisers = {
     jbu: jointBilateralUpsampling(),
-    gaussian: gaussianBlur(lowResFogPass, blurRadius),
-    raw: lowResFogPass.sample(screenUV)
+    gaussian: gaussianBlur(lowResFogPass, blurRadius).r,
+    raw: lowResFogPass.sample(screenUV).r
   }
 
   const renderPipeline = new RenderPipeline(renderer)
@@ -273,7 +302,7 @@ export function createFogPipeline({
 
   const setResolutionScale = (value: number) => {
     resolutionScale.value = value
-    lowResFogPass.setResolutionScale(value)
+    ;(lowResFogPass as unknown as ResizableRTTNode).setResolutionScale(value)
   }
 
   setDenoiser('jbu')
