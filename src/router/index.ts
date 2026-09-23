@@ -15,6 +15,11 @@ const router = createRouter({
       component: () => import('../views/WallOfMistView.vue')
     },
     {
+      path: '/magic-card',
+      name: 'magic-card',
+      component: () => import('../views/MagicCardView.vue')
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('../views/NotFoundView.vue')
