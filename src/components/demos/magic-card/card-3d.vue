@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 
 // A pointer-driven 3D tilt container, ported from markmiro's "3D card hover effect"
 // (https://codepen.io/markmiro/pen/wbqMPa). The component is deliberately style-free:
@@ -22,6 +22,11 @@ const props = withDefaults(
     activeDuration: 150
   }
 )
+
+// The pointer offset from the card's centre, each axis in -1..1 (y grows downward, as on
+// screen), and back to 0, 0 when the pointer leaves — lets content inside the card follow
+// the tilt without knowing how the transform is built.
+const emit = defineEmits<{ tilt: [offset: { x: number; y: number }] }>()
 
 // Any class/style written on <Card3D> should dress the card itself, not the
 // perspective wrapper, so the fallthrough is redirected by hand below.
@@ -63,6 +68,13 @@ function rotateToMouse(event: MouseEvent) {
       #0000000f
     )
   `
+
+  // Clamped because the listener is on the document, so the pointer can run past an edge.
+  const clamp = (value: number) => Math.max(-1, Math.min(1, value))
+  emit('tilt', {
+    x: clamp(centerX / (bounds.width / 2)),
+    y: clamp(centerY / (bounds.height / 2))
+  })
 }
 
 function startTilting() {
@@ -84,11 +96,25 @@ function stopTilting() {
   // The pen clears the card's background here, which leaves the glare frozen at
   // wherever the pointer left it; clearing the glare is what was meant.
   if (glow.value) glow.value.style.backgroundImage = ''
+  emit('tilt', { x: 0, y: 0 })
 }
+
+// The one exception to measuring once: the consumer may resize the card while it is
+// hovered (an expand on click, say), and no fresh mouseenter would follow to re-measure.
+const resizeObserver = new ResizeObserver(() => {
+  if (isTilting.value && card.value) bounds = card.value.getBoundingClientRect()
+})
+
+onMounted(() => {
+  if (card.value) resizeObserver.observe(card.value)
+})
 
 // The pen never tears down, so leaving the page mid-hover would strand the
 // document listener for the rest of the session.
-onUnmounted(() => document.removeEventListener('mousemove', rotateToMouse))
+onUnmounted(() => {
+  document.removeEventListener('mousemove', rotateToMouse)
+  resizeObserver.disconnect()
+})
 </script>
 
 <template>
