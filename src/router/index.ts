@@ -10,11 +10,6 @@ const router = createRouter({
       component: HomeView
     },
     {
-      path: '/wall-of-mist',
-      name: 'wall-of-mist',
-      component: () => import('../views/WallOfMistView.vue')
-    },
-    {
       path: '/magic-card',
       name: 'magic-card',
       component: () => import('../views/MagicCardView.vue')

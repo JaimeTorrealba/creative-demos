@@ -5,10 +5,9 @@ import { WebGPURenderer } from 'three/webgpu'
 import { toValue } from 'vue'
 import Card3D from '../components/demos/magic-card/card-3d.vue'
 import CardFace, { type MagicCard } from '../components/demos/magic-card/card-face.vue'
-import TheExperience from '../components/demos/wall-of-mist/index.vue'
+import TheExperience from '../components/demos/magic-card/wall-of-mist/index.vue'
 
-// Same renderer as the standalone Wall of Mist view — the experience's fog
-// pipeline is built from node materials and needs the WebGPU backend.
+// The art's fog pipeline is built from node materials and needs the WebGPU backend.
 const createRenderer = (ctx: TresRendererSetupContext) =>
   new WebGPURenderer({
     canvas: toValue(ctx.canvas),

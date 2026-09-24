@@ -14,5 +14,5 @@ A Vue 3 + TresJS/Three.js creative coding lab. Sibling project to `creative-lab`
 ## Commands
 
 - `/new-demo <name>` — scaffold a new demo: component folder, view, and route, following the
-  WallOfMist structure.
+  original WallOfMist scaffold (view + `components/demos/<name>/index.vue` + route).
 - `/verify` — end-of-session pass: type check, lint, tests (none configured yet), then a readability cleanup of the session's changed code.

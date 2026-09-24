@@ -1,5 +1,5 @@
 ---
-description: Scaffold a new demo — component folder, view, and route — using the WallOfMist structure
+description: Scaffold a new demo — component folder, view, and route — using the original WallOfMist scaffold structure
 argument-hint: <demo name> e.g. "Drifting Shards" or drifting-shards
 allowed-tools: Bash(ls:*), Bash(cat:*), Bash(mkdir:*), Bash(git status:*), Read, Edit, Write, Glob, Grep
 ---
@@ -9,8 +9,7 @@ Scaffold a new demo named: **$ARGUMENTS**
 If no name was given, stop and ask for one. Do not invent a demo name.
 
 This produces the same three-part structure every demo in this project uses. The templates
-below are a frozen snapshot of the WallOfMist scaffold — use them as written rather than
-copying the current `wall-of-mist` files, which will have filled up with demo-specific code.
+below are a frozen snapshot of the original WallOfMist scaffold — use them as written.
 
 ## Step 1 — Derive the names
 

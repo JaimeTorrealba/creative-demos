@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Smoke } from '@tresjs/cientos'
 import { reactive } from 'vue'
-import { useTweakpane } from '../../../composables/useTweakpane'
+import { useTweakpane } from '../../../../composables/useTweakpane'
 import { addSmokeControls, type SmokeBank, type SmokeShared } from './smoke-pane'
 import { createSmokeTextures } from './smoke-texture'
 
-const textures = createSmokeTextures(8)
+const textures = createSmokeTextures(9)
 
 /**
  * The GLB has no ground plane — every tower's geometry stops flat at y = 0 against the EXR sky,
@@ -17,7 +17,8 @@ const textures = createSmokeTextures(8)
  * half occluding — which is what left the cut lines showing. Size goes up and opacity broadly
  * down with distance, for aerial perspective against the pale sky.
  *
- * The cut lines being covered, from the GLB bounds: tower_19001 (x -15..-9, z -25..-18),
+ * The cut lines being covered, from the GLB bounds: tower_19001 (x -15..-9, z -25..-18, the
+ * nearest and so the only one given two banks),
  * tower_20_details001 (x 6..10, z -21..-17), tower_10001_1 (x -16..3, a long span),
  * tower_07002 (x 6..20, z -107..-90) and tower_10001 (x -16..-8, z -123..-115) all cut at
  * y = 0; tower_07002_2 is the exception, floating with its base at y = 6.5.
@@ -37,17 +38,33 @@ const banks = reactive<SmokeBank[]>([
     texture: textures[0]
   },
   {
+    // Widened past tower_19001's full 6-unit span: the card's CameraShake drift swings the
+    // left edge of the frame across it, and the narrower bank left its corners showing.
     label: 'near left',
-    position: { x: -12, y: 1.2, z: -14 },
-    scale: 5.0,
-    opacity: 0.75,
+    position: { x: -12.5, y: 0.8, z: -14 },
+    scale: 6.5,
+    opacity: 0.85,
     color: '#dde3ea',
     speed: 0.35,
-    segments: 12,
+    segments: 16,
     depth: 0.3,
-    spreadX: 0.8,
+    spreadX: 1.1,
     spreadY: 0.3,
     texture: textures[1]
+  },
+  {
+    // A low, dense band pressed against tower_19001's front face, right on its y = 0 cut.
+    label: 'near left low',
+    position: { x: -12, y: 0.3, z: -17 },
+    scale: 5.0,
+    opacity: 0.8,
+    color: '#dde3ea',
+    speed: 0.3,
+    segments: 12,
+    depth: 0.25,
+    spreadX: 1.0,
+    spreadY: 0.2,
+    texture: textures[8]
   },
   {
     label: 'near right',

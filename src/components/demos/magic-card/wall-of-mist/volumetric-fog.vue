@@ -2,7 +2,7 @@
 import { useLoop, useTresContext } from '@tresjs/core'
 import { WebGPURenderer } from 'three/webgpu'
 import { onUnmounted } from 'vue'
-import { useTweakpane } from '../../../composables/useTweakpane'
+import { useTweakpane } from '../../../../composables/useTweakpane'
 import { addFogControls } from './fog-pane'
 import { createFogPipeline } from './fog-pipeline'
 import { createNoise3DTexture } from './noise-3d'

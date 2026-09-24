@@ -33,7 +33,7 @@ import {
 /**
  * `@types/three` is pinned to 0.184 while `three` is 0.186, because the 0.186 types break
  * TresJS's `:position="[x, y, z]"` array shorthand — swapping them in errors out both
- * `WallOfMistView.vue` and `smoke-banks.vue`. Its `RTTNode` declaration predates the three
+ * `MagicCardView.vue` and `smoke-banks.vue`. Its `RTTNode` declaration predates the three
  * members used below, all of which exist at runtime in 0.186 and are declared by 0.186's
  * own types. These two shapes mirror that upstream declaration rather than widening
  * anything; drop them if the pin is ever lifted.
