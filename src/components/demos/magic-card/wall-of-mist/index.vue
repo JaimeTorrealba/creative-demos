@@ -27,10 +27,10 @@ if (rendererInstance instanceof WebGPURenderer) {
 
 const loader = new GLTFLoader().setDRACOLoader(draco).setKTX2Loader(ktx2)
 
-const { scene: model } = await loader.loadAsync('/WallOfMist/MTGWallOfMist.glb')
+const { scene: model } = await loader.loadAsync('/magic-card/WallOfMist/MTGWallOfMist.glb')
 
 const envMap = await new EXRLoader().loadAsync(
-  '/WallOfMist/cloudy-sky-over-the-sea_1K_c8cc5897-1bb2-445a-8563-e094a4c2dfb6.exr'
+  '/magic-card/WallOfMist/cloudy-sky-over-the-sea_1K_c8cc5897-1bb2-445a-8563-e094a4c2dfb6.exr'
 )
 envMap.mapping = EquirectangularReflectionMapping
 scene.value.environment = envMap

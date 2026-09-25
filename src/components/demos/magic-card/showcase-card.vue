@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref, useTemplateRef } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, useTemplateRef } from 'vue'
 import Card3D from './card-3d.vue'
 import CardFace, { type MagicCard } from './card-face.vue'
+import ClassicCardFace from './classic-card-face.vue'
 
 // One interactive card on the page: the tilt, the click-to-expand over a dimmed page and
 // the double-click-to-fullscreen art. What goes in the art window is the consumer's — it
 // arrives through the `art` slot, which is handed the pointer offset to steer a camera by.
 
-defineProps<{ card: MagicCard }>()
+const props = withDefaults(defineProps<{ card: MagicCard; frame?: 'modern' | 'classic' }>(), {
+  frame: 'modern'
+})
+
+const face = computed(() => (props.frame === 'classic' ? ClassicCardFace : CardFace))
 
 defineSlots<{ art(props: { tilt: { x: number; y: number } }): unknown }>()
 
@@ -110,7 +115,7 @@ onUnmounted(() => {
       @click="toggleExpanded"
       @tilt="onCardTilt"
     >
-      <CardFace :card="card">
+      <component :is="face" :card="card">
         <template #art>
           <div
             ref="art-fullscreen"
@@ -122,7 +127,7 @@ onUnmounted(() => {
             <slot name="art" :tilt="tilt" />
           </div>
         </template>
-      </CardFace>
+      </component>
     </Card3D>
   </div>
 </template>

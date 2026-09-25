@@ -23,6 +23,8 @@ export interface MagicCard {
   // One entry per rules paragraph.
   rules: string[]
   flavor?: string
+  // mana-font key printed large in an empty text box, as on basic lands. Old frame only.
+  watermark?: string
   power?: string
   toughness?: string
   collectorNumber: string
