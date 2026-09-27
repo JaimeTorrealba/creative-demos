@@ -11,7 +11,8 @@ import ForestGodrays from '../components/demos/magic-card/forest-godrays/index.v
 import ShowcaseCard from '../components/demos/magic-card/showcase-card.vue'
 import WallOfMist from '../components/demos/magic-card/wall-of-mist/index.vue'
 
-// The art's fog pipeline is built from node materials and needs the WebGPU backend.
+// Every scene is built on node materials (the fog, the god rays, the splat), which need the
+// WebGPU backend.
 const createRenderer = (ctx: TresRendererSetupContext) =>
   new WebGPURenderer({
     canvas: toValue(ctx.canvas),
@@ -99,7 +100,8 @@ const forestCamera: CameraPose = {
   // the view; this one steps and turns wide enough to slide the trunks past each other.
   parallax: { maxYaw: 0.15, maxPitch: 0.09, maxShift: 1.5 }
 }
-// Level with the dragon, looking straight ahead at it over the hoard.
+// Level with the dragon. Only the position really counts: the scene turns the camera onto the
+// dragon every frame, so rotationX is just the rest pose CameraParallax starts from.
 const dragonAvaroCamera: CameraPose = { position: [0, 0.5, 5], rotationX: 0, fov: 50 }
 // A card with no scene yet shows a black art window.
 interface CardEntry {
@@ -113,21 +115,21 @@ const cards: CardEntry[] = [
   {
     id: 'first',
     card: forest,
-    frame: 'classic' as const,
+    frame: 'classic',
     scene: markRaw(ForestGodrays),
     camera: forestCamera
   },
   {
     id: 'second',
     card: wallOfMist,
-    frame: 'modern' as const,
+    frame: 'modern',
     scene: markRaw(WallOfMist),
     camera: wallOfMistCamera
   },
   {
     id: 'third',
     card: dragonAvaro,
-    frame: 'modern' as const,
+    frame: 'modern',
     scene: markRaw(DragonAvaro),
     camera: dragonAvaroCamera
   }

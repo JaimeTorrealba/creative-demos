@@ -2,7 +2,7 @@
 // The left magic card's art: god rays pouring through a forest. It fills the card's #art slot
 // in MagicCardView, which only supplies the canvas and camera, so this component owns all the
 // other scene content: models, environment, lights and effects.
-import { isWebGPURenderer, useLoop, useTresContext } from '@tresjs/core'
+import { useLoop, useTresContext } from '@tresjs/core'
 import {
   Color,
   DirectionalLight,
@@ -16,6 +16,7 @@ import {
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
+import { WebGPURenderer } from 'three/webgpu'
 import { onUnmounted } from 'vue'
 import { useTweakpane } from '../../../../composables/useTweakpane'
 import GodRays from './god-rays.vue'
@@ -29,12 +30,13 @@ const ktx2 = new KTX2Loader().setTranscoderPath('/basis/')
 // target off the live backend, so both wait for it. The top-level await is what makes the
 // <Suspense> wrapper in the view meaningful.
 const { renderer, scene } = useTresContext()
-if (isWebGPURenderer(renderer.instance)) {
+const rendererInstance = renderer.instance
+if (rendererInstance instanceof WebGPURenderer) {
   // The godrays are read off the sun's shadow map, so shadows have to be on. Set here rather
   // than on the card's TresCanvas so only this card's renderer pays for them.
-  renderer.instance.shadowMap.enabled = true
-  await renderer.instance.init()
-  ktx2.detectSupport(renderer.instance)
+  rendererInstance.shadowMap.enabled = true
+  await rendererInstance.init()
+  ktx2.detectSupport(rendererInstance)
 }
 
 // Palette picked off the reference art's light alone: a pale yellow-green where the shafts

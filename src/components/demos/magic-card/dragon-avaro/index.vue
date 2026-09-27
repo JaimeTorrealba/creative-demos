@@ -2,7 +2,7 @@
 // The right magic card's art: Dragón avaro flying over its treasure hoard, a cliff behind. It
 // fills the card's #art slot in MagicCardView, which only supplies the canvas and camera, so
 // this component owns all the other scene content: models, backdrop and lights.
-import { isWebGPURenderer, useLoop, useTresContext } from '@tresjs/core'
+import { useLoop, useTresContext } from '@tresjs/core'
 import {
   AnimationMixer,
   Box3,
@@ -19,6 +19,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { GaussianSplat } from 'three/addons/objects/GaussianSplat.js'
+import { WebGPURenderer } from 'three/webgpu'
 import { onUnmounted } from 'vue'
 import { useTweakpane } from '../../../../composables/useTweakpane'
 import { loadSog } from '../../../../utils/loadSog'
@@ -31,9 +32,10 @@ const ktx2 = new KTX2Loader().setTranscoderPath('/basis/')
 // KTX2 reads its transcode target off the live backend, so it waits for it. The top-level
 // await is what makes the <Suspense> wrapper in the view meaningful.
 const { renderer, camera } = useTresContext()
-if (isWebGPURenderer(renderer.instance)) {
-  await renderer.instance.init()
-  ktx2.detectSupport(renderer.instance)
+const rendererInstance = renderer.instance
+if (rendererInstance instanceof WebGPURenderer) {
+  await rendererInstance.init()
+  ktx2.detectSupport(rendererInstance)
 }
 
 const loader = new GLTFLoader().setDRACOLoader(draco).setKTX2Loader(ktx2)
@@ -45,8 +47,8 @@ const [dragonGltf, treasureGltf, cliffGeometry] = await Promise.all([
 const dragon = dragonGltf.scene
 const treasure = treasureGltf.scene
 
-// The cliff splat is the backdrop. The capture is y-down, hence the flip on x;
-// the quarter turn on y faces the cliff towards the camera, and it sits back behind the hoard.
+// The cliff splat is the backdrop. The capture is y-down, hence the flip on x; the quarter turn
+// on y faces the cliff towards the camera, and it sits back behind the hoard.
 const cliff = new GaussianSplat(cliffGeometry)
 const cliffParams = { scale: 0.47 }
 cliff.position.set(0, -1.1, -8.7)
