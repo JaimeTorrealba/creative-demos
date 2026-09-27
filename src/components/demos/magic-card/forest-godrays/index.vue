@@ -70,10 +70,16 @@ shadowCamera.far = 120
 // the gaps as if the canopy were moving. Two sines per axis at unrelated rates keep the path
 // from visibly repeating. Kept well under a degree: every shadow in the scene moves with it.
 const sunRest = sun.position.clone()
-const sunDrift = { amplitude: 0.8, speed: 0.15 }
+const sunDrift = { amplitude: 0.8, speed: 0.22 }
+
+// The sun also brightens and dims on a slow sine, so the shafts swell and fade like light
+// breaking through passing cloud. depth is the swing either side of base, as a fraction of it.
+const sunPulse = { base: sun.intensity, depth: 0.3, speed: 0.4 }
 
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ elapsed }) => {
+  sun.intensity = sunPulse.base * (1 + sunPulse.depth * Math.sin(elapsed * sunPulse.speed))
+
   const t = elapsed * sunDrift.speed
   const wanderX = (Math.sin(t) + 0.5 * Math.sin(t * 2.3 + 1.7)) / 1.5
   const wanderY = (Math.sin(t * 0.7 + 0.4) + 0.5 * Math.sin(t * 1.9 + 2.9)) / 1.5
@@ -127,7 +133,9 @@ const pane = useTweakpane('Lighting')
 pane
   .addBinding(params, 'sunColor', { label: 'sun colour', view: 'color' })
   .on('change', (ev) => sun.color.set(ev.value))
-pane.addBinding(sun, 'intensity', { label: 'sun intensity', min: 0, max: 10, step: 0.1 })
+pane.addBinding(sunPulse, 'base', { label: 'sun intensity', min: 0, max: 10, step: 0.1 })
+pane.addBinding(sunPulse, 'depth', { label: 'pulse depth', min: 0, max: 1, step: 0.01 })
+pane.addBinding(sunPulse, 'speed', { label: 'pulse speed', min: 0, max: 2, step: 0.01 })
 pane.addBinding(fill, 'intensity', { label: 'fill intensity', min: 0, max: 3, step: 0.05 })
 pane.addBinding(sunDrift, 'amplitude', { label: 'sun drift', min: 0, max: 4, step: 0.05 })
 pane.addBinding(sunDrift, 'speed', { label: 'drift speed', min: 0, max: 1, step: 0.01 })

@@ -16,12 +16,18 @@ export interface MagicCard {
   name: string
   // mana-font keys, one per symbol: ['1', 'u'] renders {1}{U}.
   cost: string[]
+  // Frame colour, blue when left out. Modern frame only.
+  color?: 'blue' | 'red'
   typeLine: string
   // keyrune set key, e.g. 'grn' for Guilds of Ravnica.
   setCode: string
   rarity: 'common' | 'uncommon' | 'rare' | 'mythic'
-  // One entry per rules paragraph.
+  // One entry per rules paragraph. {key} prints a mana-font symbol inline, e.g. {tap};
+  // (parenthesised) reminder text is set in italics.
   rules: string[]
+  // Rules text size in cqw, for cards with more text than the default 4.8 fits.
+  rulesSize?: number
+  // A line break puts the attribution on its own line.
   flavor?: string
   // mana-font key printed large in an empty text box, as on basic lands. Old frame only.
   watermark?: string
@@ -46,17 +52,60 @@ const paleNoise = `${uid}-pale-noise`
 const hasPowerToughness = computed(
   () => props.card.power !== undefined && props.card.toughness !== undefined
 )
+
+// The frame grain per colour: the blue frame is stretched into watery streaks, the red
+// one is a fine even speckle. Each is a light layer where the noise peaks and a dark one
+// where it dips.
+const frameGrains = {
+  blue: {
+    frequency: '0.006 0.032',
+    light: '0 0 0 0 0.78  0 0 0 0 0.92  0 0 0 0 1  1.9 0 0 0 -0.9',
+    dark: '0 0 0 0 0.02  0 0 0 0 0.22  0 0 0 0 0.45  -1.9 0 0 0 0.8'
+  },
+  red: {
+    frequency: '0.05 0.05',
+    light: '0 0 0 0 1  0 0 0 0 0.86  0 0 0 0 0.82  2.6 0 0 0 -1.5',
+    dark: '0 0 0 0 0.35  0 0 0 0 0.04  0 0 0 0 0.03  -2.2 0 0 0 0.85'
+  }
+}
+const color = computed(() => props.card.color ?? 'blue')
+const frameGrain = computed(() => frameGrains[color.value])
+
+// Each paragraph as runs of plain and reminder (italic) text, each run as text and
+// inline symbols. Symbols can sit inside reminder text, so the parentheses are split
+// out first.
+interface RulesRun {
+  italic: boolean
+  parts: { text?: string; symbol?: string }[]
+}
+const splitSymbols = (text: string) =>
+  text
+    .split(/(\{[^}]+\})/)
+    .filter(Boolean)
+    .map((part) => (part.startsWith('{') ? { symbol: part.slice(1, -1) } : { text: part }))
+
+const rules = computed<RulesRun[][]>(() =>
+  props.card.rules.map((paragraph) =>
+    paragraph
+      .split(/(\([^)]*\))/)
+      .filter(Boolean)
+      .map((run) => ({ italic: run.startsWith('('), parts: splitSymbols(run) }))
+  )
+)
 </script>
 
 <template>
-  <article class="card-face">
+  <article
+    class="card-face"
+    :class="`card-face--${color}`"
+    :style="card.rulesSize ? { '--rules-size': `${card.rulesSize}cqw` } : undefined"
+  >
     <!-- Shared noise filters. Each textured surface draws a rect through one of
          these inside its own viewBox'd svg, so the grain is measured in card units
          and scales with the card instead of staying fixed in screen pixels. -->
     <svg class="defs" aria-hidden="true">
       <defs>
-        <!-- Stretched horizontally for the watery streaks of the blue frame: a light
-             layer where the noise peaks and a dark one where it dips. -->
+        <!-- The frame grain, tuned per colour in frameGrains. -->
         <filter
           :id="frameNoise"
           x="0"
@@ -67,23 +116,13 @@ const hasPowerToughness = computed(
         >
           <feTurbulence
             type="fractalNoise"
-            baseFrequency="0.006 0.032"
+            :baseFrequency="frameGrain.frequency"
             numOctaves="4"
             seed="7"
             result="noise"
           />
-          <feColorMatrix
-            in="noise"
-            result="light"
-            type="matrix"
-            values="0 0 0 0 0.78  0 0 0 0 0.92  0 0 0 0 1  1.9 0 0 0 -0.9"
-          />
-          <feColorMatrix
-            in="noise"
-            result="dark"
-            type="matrix"
-            values="0 0 0 0 0.02  0 0 0 0 0.22  0 0 0 0 0.45  -1.9 0 0 0 0.8"
-          />
+          <feColorMatrix in="noise" result="light" type="matrix" :values="frameGrain.light" />
+          <feColorMatrix in="noise" result="dark" type="matrix" :values="frameGrain.dark" />
           <feMerge>
             <feMergeNode in="dark" />
             <feMergeNode in="light" />
@@ -148,7 +187,14 @@ const hasPowerToughness = computed(
           <rect width="100%" height="100%" :filter="`url(#${paleNoise})`" />
         </svg>
         <div class="rules">
-          <p v-for="(paragraph, index) in card.rules" :key="index">{{ paragraph }}</p>
+          <p v-for="(paragraph, index) in rules" :key="index">
+            <component :is="run.italic ? 'em' : 'span'" v-for="(run, r) in paragraph" :key="r">
+              <template v-for="(part, p) in run.parts" :key="p">
+                <i v-if="part.symbol" class="ms ms-cost inline-symbol" :class="`ms-${part.symbol}`" />
+                <template v-else>{{ part.text }}</template>
+              </template>
+            </component>
+          </p>
           <template v-if="card.flavor">
             <hr class="flavor-bar" />
             <p class="flavor">{{ card.flavor }}</p>
@@ -184,11 +230,16 @@ const hasPowerToughness = computed(
   --border: #171314;
   --frame-light: #2c90d6;
   --frame-mid: #1670b6;
+  --frame-deep: #1b7cc2;
   --frame-edge: #0b4a82;
   --pale-top: #dce8f1;
   --pale-bottom: #bccfdd;
   --pale-box: #d7e4ef;
+  --pale-shade: #7f9db3;
+  --pt-border: #8fb1ca;
   --bar-outline: #0f2b44;
+  --art-outline: #0a2f52;
+  --box-outline: #0e3b64;
   --ink: #111;
 
   container-type: inline-size;
@@ -199,6 +250,21 @@ const hasPowerToughness = computed(
   border-radius: inherit;
   background: var(--border);
   color: var(--ink);
+}
+
+.card-face--red {
+  --frame-light: #d4432f;
+  --frame-mid: #b82c22;
+  --frame-deep: #c33a2b;
+  --frame-edge: #6e1510;
+  --pale-top: #f8e8e0;
+  --pale-bottom: #e8c4b6;
+  --pale-box: #f4e2d9;
+  --pale-shade: #b98474;
+  --pt-border: #d9a898;
+  --bar-outline: #4a120d;
+  --art-outline: #4a120d;
+  --box-outline: #5a1a12;
 }
 
 .defs {
@@ -245,7 +311,7 @@ const hasPowerToughness = computed(
     172deg,
     var(--frame-light),
     var(--frame-mid) 38%,
-    #1b7cc2 68%,
+    var(--frame-deep) 68%,
     var(--frame-light)
   );
   box-shadow: inset 0 0 0 0.25cqw var(--frame-edge);
@@ -266,7 +332,7 @@ const hasPowerToughness = computed(
   box-shadow:
     0 0 0 0.35cqw var(--bar-outline),
     inset 0 0.35cqw 0 #ffffffb0,
-    inset 0 -0.35cqw 0 #7f9db3;
+    inset 0 -0.35cqw 0 var(--pale-shade);
 }
 
 .name,
@@ -302,7 +368,7 @@ const hasPowerToughness = computed(
   margin: 0 1.5cqw;
   overflow: hidden;
   background: #000;
-  box-shadow: 0 0 0 0.3cqw #0a2f52;
+  box-shadow: 0 0 0 0.3cqw var(--art-outline);
 }
 
 .art {
@@ -323,15 +389,21 @@ const hasPowerToughness = computed(
   overflow: hidden;
   background: var(--pale-box);
   box-shadow:
-    0 0 0 0.3cqw #0e3b64,
+    0 0 0 0.3cqw var(--box-outline),
     inset 0 0.5cqw 0.8cqw #0000002a;
 }
 
 .rules {
   font-family: 'Crimson Pro', 'Times New Roman', serif;
-  font-size: 4.8cqw;
+  font-size: var(--rules-size, 4.8cqw);
   line-height: 1.12;
   color: var(--ink);
+}
+
+/* Mana symbols inside a line of rules text, sized to sit on the text like a capital. */
+.inline-symbol {
+  font-size: 0.62em;
+  vertical-align: 0.15em;
 }
 
 .rules p {
@@ -352,6 +424,7 @@ const hasPowerToughness = computed(
 
 .flavor {
   font-style: italic;
+  white-space: pre-line;
 }
 
 /* --- Power / toughness ---------------------------------------------------- */
@@ -365,7 +438,7 @@ const hasPowerToughness = computed(
   display: grid;
   place-items: center;
   overflow: hidden;
-  border: 0.8cqw solid #8fb1ca;
+  border: 0.8cqw solid var(--pt-border);
   border-radius: 2.2cqw 1.4cqw 1.4cqw 1.4cqw;
   background: linear-gradient(var(--pale-top), var(--pale-bottom));
   box-shadow:

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { TresCanvas, type TresRendererSetupContext } from '@tresjs/core'
 import { WebGPURenderer } from 'three/webgpu'
-import { markRaw, toValue } from 'vue'
+import { markRaw, ref, toValue, type Component } from 'vue'
+import LoadingScreen from '../components/ui/loading-screen.vue'
 import SlideOut from '../components/ui/slide-out.vue'
 import CameraParallax from '../components/demos/magic-card/camera-parallax.vue'
 import type { MagicCard } from '../components/demos/magic-card/card-face.vue'
+import DragonAvaro from '../components/demos/magic-card/dragon-avaro/index.vue'
 import ForestGodrays from '../components/demos/magic-card/forest-godrays/index.vue'
 import ShowcaseCard from '../components/demos/magic-card/showcase-card.vue'
 import WallOfMist from '../components/demos/magic-card/wall-of-mist/index.vue'
@@ -53,6 +55,29 @@ const forest: MagicCard = {
   copyright: '©1993–2000 Wizards of the Coast, Inc.'
 }
 
+const dragonAvaro: MagicCard = {
+  name: 'Dragón avaro',
+  cost: ['4', 'r'],
+  color: 'red',
+  typeLine: 'Criatura — Dragón',
+  setCode: 'm20',
+  rarity: 'uncommon',
+  rules: [
+    'Vuela.',
+    'Cuando el Dragón avaro entre al campo de batalla, crea dos fichas de Tesoro. (Son artefactos con “{tap}, sacrificar este artefacto: Agrega un maná de cualquier color”.)'
+  ],
+  rulesSize: 4.1,
+  flavor: '“Seguro que no se dará cuenta si le robo un poqui…”.\n—Theria la Sagaz, últimas palabras',
+  power: '3',
+  toughness: '3',
+  collectorNumber: '153/280',
+  rarityLetter: 'U',
+  setLabel: 'M20',
+  language: 'SP',
+  artist: 'Johan Grenier',
+  copyright: '™ & © 2019 Wizards of the Coast'
+}
+
 // Each card brings its own face, scene and the camera pose that frames it. CameraParallax
 // reads its rest pose off position and rotation, so the pose is written as a rotation, not
 // a look-at.
@@ -74,7 +99,17 @@ const forestCamera: CameraPose = {
   // the view; this one steps and turns wide enough to slide the trunks past each other.
   parallax: { maxYaw: 0.15, maxPitch: 0.09, maxShift: 1.5 }
 }
-const cards = [
+// Level with the dragon, looking straight ahead at it over the hoard.
+const dragonAvaroCamera: CameraPose = { position: [0, 0.5, 5], rotationX: 0, fov: 50 }
+// A card with no scene yet shows a black art window.
+interface CardEntry {
+  id: string
+  card: MagicCard
+  frame: 'modern' | 'classic'
+  scene?: Component
+  camera?: CameraPose
+}
+const cards: CardEntry[] = [
   {
     id: 'first',
     card: forest,
@@ -91,12 +126,17 @@ const cards = [
   },
   {
     id: 'third',
-    card: wallOfMist,
+    card: dragonAvaro,
     frame: 'modern' as const,
-    scene: markRaw(WallOfMist),
-    camera: wallOfMistCamera
+    scene: markRaw(DragonAvaro),
+    camera: dragonAvaroCamera
   }
 ]
+
+// The page stays behind the loading screen until every scene has finished its top-level awaits
+// (renderer, models, textures, splat), which is when its <Suspense> resolves.
+const sceneCount = cards.filter((entry) => entry.scene).length
+const scenesReady = ref(0)
 </script>
 
 <template>
@@ -126,7 +166,11 @@ const cards = [
 
     <ShowcaseCard v-for="entry in cards" :key="entry.id" :card="entry.card" :frame="entry.frame">
       <template #art="{ tilt }">
-        <TresCanvas clear-color="#000" :renderer="createRenderer">
+        <TresCanvas
+          v-if="entry.scene && entry.camera"
+          clear-color="#000"
+          :renderer="createRenderer"
+        >
           <TresPerspectiveCamera
             :position="entry.camera.position"
             :rotation-x="entry.camera.rotationX"
@@ -135,7 +179,7 @@ const cards = [
           <!-- Follows the card's tilt. It reads the camera's starting pose as its rest
                pose, so it has to come after the camera. -->
           <CameraParallax :tilt="tilt" v-bind="entry.camera.parallax" />
-          <Suspense>
+          <Suspense @resolve="scenesReady++">
             <component :is="entry.scene" />
           </Suspense>
         </TresCanvas>
@@ -157,10 +201,31 @@ const cards = [
       <ul>
         <li>Forest card art by John Avon.</li>
         <li>Wall of Mist card art by Tianhua X.</li>
+        <li>Dragón avaro card art by Johan Grenier.</li>
         <li>Card text and frames ™ &amp; © Wizards of the Coast.</li>
         <li>
           <a href="https://skfb.ly/oOVIJ" target="_blank" rel="noopener">Tree models</a> for the
           Forest scene.
+        </li>
+        <li>
+          <a
+            href="https://sketchfab.com/3d-models/red-dragon-d53fe00255334386a0fd1f4ac2858cab"
+            target="_blank"
+            rel="noopener"
+            >Red dragon model</a
+          >
+          and
+          <a
+            href="https://sketchfab.com/3d-models/gold-pile-and-loot-props-7d537aa21d8046f6848e2d6125c0cdcc"
+            target="_blank"
+            rel="noopener"
+            >gold pile</a
+          >
+          and
+          <a href="https://superspl.at/scene/21eb6a8a" target="_blank" rel="noopener"
+            >cliff Gaussian splat</a
+          >
+          for the Dragón avaro scene.
         </li>
         <li>
           Parchment backdrop after
@@ -183,8 +248,17 @@ const cards = [
           />
           <figcaption>Wall of Mist</figcaption>
         </figure>
+        <figure>
+          <img
+            src="/magic-card/dragon%20avaro%20card.jpg"
+            alt="The printed Dragón avaro card by Johan Grenier"
+          />
+          <figcaption>Dragón avaro</figcaption>
+        </figure>
       </div>
     </SlideOut>
+
+    <LoadingScreen :ready="scenesReady" :total="sceneCount" />
   </main>
 </template>
 
@@ -228,8 +302,11 @@ const cards = [
   min-height: 100svh;
   padding: 48px 16px;
   box-sizing: border-box;
-  /* Shows through wherever the displaced parchment edge pulls in from the viewport. */
+  /* Shows through wherever the displaced parchment edge pulls in from the page edge. */
   background: #5a3a1c;
+  /* The parchment layers are sized off the stage, so they grow with the page when the
+     cards wrap onto more rows than the viewport holds. */
+  position: relative;
   /* Lets the parchment layers sit at z-index -1 without falling behind the page. */
   isolation: isolate;
 }
@@ -243,7 +320,7 @@ const cards = [
 
 .parchment,
 .parchment-grain {
-  position: fixed;
+  position: absolute;
   z-index: -1;
   pointer-events: none;
 }
