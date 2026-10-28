@@ -15,6 +15,11 @@ const router = createRouter({
       component: () => import('../views/MagicCardView.vue')
     },
     {
+      path: '/hair-mesh',
+      name: 'hair-mesh',
+      component: () => import('../views/HairMeshView.vue')
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('../views/NotFoundView.vue')
